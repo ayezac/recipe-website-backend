@@ -26,6 +26,37 @@ class RecipeSerializer(serializers.ModelSerializer):
             Ingredient.objects.create(recipe=recipe, **ingredient)
         return recipe
 
+    def update(self, instance, validated_data):
+        if validated_data.get('image') != None:
+            instance.image = validated_data.get('image', instance.image)
+       
+        instance.title = validated_data.get('title', instance.title)
+        instance.method = validated_data.get('method', instance.method)
+        ingredients_data = validated_data.pop('ingredient_set')
+        instance.save()
+        ingredients =[]
+        ingredients_ids = [ingredient.id for ingredient in instance.ingredient_set.all()]
+
+        for ingredient_data in ingredients_data:
+            if 'id' in ingredient_data.keys():
+                if Ingredient.objects.filter(id=ingredient_data['id']).exists():
+                    ingredient = Ingredient.objects.get(id=ingredient_data['id'])
+                    ingredient.item = ingredient_data.get('item', ingredient.item)
+                    ingredient.quantity = ingredient_data.get('quantity', ingredient.quantity)
+                    ingredient.save()
+                    ingredients.append(ingredient.id)
+                else:
+                    continue
+            else:
+                ingredient = Ingredient.objects.create(**ingredient_data, recipe=instance)
+                ingredients.append(ingredient.id)
+        
+        for ingredient in instance.ingredient_set.all():
+            if ingredient.id not in ingredients:
+                ingredient.delete()
+    
+        return instance
+
 class SavedRecipeSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     recipe = RecipeSerializer(read_only=True)
