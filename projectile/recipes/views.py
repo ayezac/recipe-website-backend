@@ -28,13 +28,38 @@ class CreateRecipe(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class RecipeDetail(RecipeGeneric, generics.RetrieveUpdateDestroyAPIView):
-    pass
+# class RecipeDetail(RecipeGeneric, generics.RetrieveUpdateDestroyAPIView):
+#     pass
+class RecipeDetail(APIView):
+    def get_object(self, pk):
+        try:
+            print(Recipe.objects.get(pk=pk).image)
+            return Recipe.objects.get(pk=pk)
+        except Recipe.DoesNotExist:
+            raise Http404
+
+    def get(self, request, pk, format=None):
+        recipe = self.get_object(pk=pk)
+        serializer = RecipeSerializer(recipe)
+        return Response(serializer.data)
+
+    def put(self, request, pk, format=None):
+        recipe = self.get_object(pk=pk)
+        serializer = RecipeSerializer(recipe, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk, format=None):
+        recipe = self.get_object(pk=pk)
+        recipe.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class IngredientDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
-
 
 @permission_classes((IsAuthenticated,))
 class SaveRecipe(APIView):
